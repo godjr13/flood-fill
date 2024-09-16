@@ -13,6 +13,19 @@ int cell_val; //current cell value (set starting cell as current cell in the beg
 int current_cell[2] = {0,16}; 
 int start[2] = {0,16};
 int goal[2] = {8,8};
+int Q_size = 16*16;
+
+//Point struct definition 
+typedef struct{
+  int x,y;
+} Point;
+
+//Queue struct definition
+typedef struct{
+  Point points[Q_size]; //defines an array of the point data type 
+  int front, rear;
+} Queue;
+
 
 //maze matrix
 int maze[16][16] = {
@@ -73,27 +86,10 @@ int explored_cells[16][16] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
-int walls[16][16] = {
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-};
 
 //movement
 void move(int direction){
+  explored_cells[current_cell[0]][current_cell[1]] = 1; //updates explored cells
   switch(direction){
     case 1://up 
       current_cell[1]++;
@@ -130,38 +126,36 @@ int check_wall(){
 }
 
 int check_nearby_cells(int cell[2]){
-  //pass in the current cell index into this function 
-  int i,j;
-  i = cell[1];
-  j = cell[2];
+  //pass in the current cell index into this function
+  int nearby_cell_val[8];
+  //nearby cell indexes
+  int nearby_cells[8][2] = {
+    {cell[0] + 1, cell[1]},       //Right
+    {cell[0] + 1, cell[1] - 1},   //Down-right
+    {cell[0], cell[1] - 1},       //Down
+    {cell[0] - 1, cell[1] - 1},   //Down-left
+    {cell[0] - 1, cell[1]},       //Left
+    {cell[0] - 1, cell[1] + 1},   //Up-left
+    {cell[0], cell[1] + 1},       //Up
+    {cell[0] + 1, cell[1] + 1}    //Up-right
+  };
   
-  int nearby_cell = {}; //cell index queue
-  int nearby_cell_val = {}; //distance values
-  
-  for(i; i<=i+1; i++){
-    for(j; j<=j+1; j++){
-      //get the cell values
-
+  for (int i = 0; i < 8; i++) {
+    int x = nearby_cells[i][0];
+    int y = nearby_cells[i][1];
+    if (x >= 0 && x < 16 && y >= 0 && y < 16) {
+      nearby_cell_val[i] = manhattan_maze[x][y];
+    }else {
+      nearby_cell_val[i] = -1; // Invalid cell
     }
   }
-
-  for(i; i<=i+1; i--){
-    for(j; j<=j+1; j--){
-      //get the cell values
-
-    }
-  }
+  return nearby_cell_val;
 }
 
-//update maze
-void update_manhattan(){
+//floodfill
+void floodfill(){
 
 }
-
-void update_explored(){
-
-}
-
 
 int main(){
   //searching algorithm
@@ -171,6 +165,8 @@ int main(){
     switch(wall){
 
       case 1: //no walls
+        check_nearby_cells(current_cell);
+        
         break;
 
       case 2: //wall left
