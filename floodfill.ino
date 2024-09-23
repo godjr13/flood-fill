@@ -295,14 +295,9 @@ void floodfill(){
           }
           enqueue(&q , nearby_min->cells[i]); //adds cell to the queue
         }
-
-      }
-
-      
-      
+      } 
     }
-  
-
+    //move to the next cell in queue
   }
 }
 
