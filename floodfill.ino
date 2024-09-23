@@ -9,7 +9,6 @@
 #define Q_size (16*16)
 #define INT_MAX 2147483647
 
-
 //distance set points
 int tof_sp, irleft_sp, irright_sp, irr45_sp, irl45_sp;
 
@@ -24,11 +23,18 @@ typedef struct{
   int front, rear;
 } Queue;
 
+//data type for minimum distance array for the check nearby cells function
+typedef struct{
+  Point cells[8];
+  int min;
+}Manhattan_min;
 
 // Maze info
 Point current_cell = {0, 16};
 Point start = {0, 16};
 Point goal = {8, 8};
+//Point *explored_cells[Q_size] = {(Point *)malloc(sizeof(Point))}; //dynamic array of all the explored cordinates
+Point invalid_cell = {-1,-1};
 
 //maze matrix
 int maze[16][16] = {
@@ -70,7 +76,7 @@ int manhattan_maze[16][16] = {
             {14,13,12,11,10,9,8,7,7,8,9,10,11,12,13,14}
 };
 
-int explored_cells[16][16] = {
+int explored[16][16] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -93,7 +99,7 @@ int explored_cells[16][16] = {
 //movement
 void move(int direction){
   //marking explored cells
-  explored_cells[current_cell.x][current_cell.y] = 1;
+  explored[current_cell.x][current_cell.y] = 1;
   switch(direction){
     case 1://up 
       current_cell.y++;
@@ -107,6 +113,18 @@ void move(int direction){
     case 4: //right
       current_cell.x++;
       break;
+    case 5: //diagonal up-left
+      current_cell.x--;
+      current_cell.y++;
+    case 6: //diagonal up-right
+      current_cell.x++;
+      current_cell.y++;
+    case 7: //diagonal down-left
+      current_cell.x--;
+      current_cell.y--;
+    case 8: //diagonal down-right
+      current_cell.x++;
+      current_cell.y--;
   }
 
 
@@ -128,16 +146,16 @@ void enqueue(Queue *q, Point p) {
 
 // Dequeue a point from the queue
 Point dequeue(Queue *q) {
-    Point p = {-1, -1};  // Default invalid point to return if queue is empty
-    
-    // Check if the queue is empty
-    if (q->front == q->rear) {
-        return p;
-    } else {
-        // Move front and return the dequeued point
-        q->front = (q->front + 1) % Q_size;
-        return q->points[q->front];
-    }
+  Point p = {-1, -1};  // Default invalid point to return if queue is empty
+  
+  // Check if the queue is empty
+  if (q->front == q->rear) {
+    return p;
+  } else {
+    // Move front and return the dequeued point
+    q->front = (q->front + 1) % Q_size;
+    return q->points[q->front];
+  }
 }
 
 //other functions
@@ -156,73 +174,56 @@ int check_wall(){
   return wall_val;
 }
 
-int* find_min_indices(int* values, int size, int* num_indices) {
-    if (size <= 0) {
-        *num_indices = 0;
-        return NULL;
+Manhattan_min* check_nearby_cells(Point cell){
+  int min = 16;
+  int nearby_cell_val[8];
+  Point min_cells[8];
+  Manhattan_min manhattan_min; 
+  Point nearby_cells[8] = {
+    {cell.x + 1, cell.y},       // Right
+    {cell.x + 1, cell.y - 1},   // Down-right
+    {cell.x, cell.y - 1},       // Down
+    {cell.x - 1, cell.y - 1},   // Down-left
+    {cell.x - 1, cell.y},       // Left
+    {cell.x - 1, cell.y + 1},   // Up-left
+    {cell.x, cell.y + 1},       // Up
+    {cell.x + 1, cell.y + 1}    // Up-right
+  };
+
+  for (int i = 0; i < 8; i++) {
+    int x = nearby_cells[i].x;
+    int y = nearby_cells[i].y;
+    if (x >= 0 && x < 16 && y >= 0 && y < 16) {
+        nearby_cell_val[i] = manhattan_maze[x][y];
+    } else {
+        nearby_cell_val[i] = -1; // Invalid cell
     }
-
-    //Find the minimum value
-    int min_value = values[0];
-    for (int i = 1; i < size; i++) {
-        if (values[i] < min_value) {
-            min_value = values[i];
-        }
-    }
-
-    //Count the number of occurrences of the minimum value
-    *num_indices = 0;
-    for (int i = 0; i < size; i++) {
-        if (values[i] == min_value) {
-            (*num_indices)++;
-        }
-    }
-
-    // Allocate memory for the indices array
-    int* indices = (int*)malloc(*num_indices * sizeof(int));
-    if (indices == NULL) {
-        *num_indices = 0;
-        return NULL; // Return NULL if memory allocation fails
-    }
-
-    //Collect the indices of the minimum value
-    int index = 0;
-    for (int i = 0; i < size; i++) {
-        if (values[i] == min_value) {
-            indices[index++] = i;
-        }
-    }
-
-    return indices;
-}
-
-int* check_nearby_cells(Point cell){
-    int nearby_cell_val[8];
-    int num_indices;
-    Point nearby_cells[8] = {
-        {cell.x + 1, cell.y},       // Right
-        {cell.x + 1, cell.y - 1},   // Down-right
-        {cell.x, cell.y - 1},       // Down
-        {cell.x - 1, cell.y - 1},   // Down-left
-        {cell.x - 1, cell.y},       // Left
-        {cell.x - 1, cell.y + 1},   // Up-left
-        {cell.x, cell.y + 1},       // Up
-        {cell.x + 1, cell.y + 1}    // Up-right
-    };
+  }
   
-    for (int i = 0; i < 8; i++) {
-        int x = nearby_cells[i].x;
-        int y = nearby_cells[i].y;
-        if (x >= 0 && x < 16 && y >= 0 && y < 16) {
-            nearby_cell_val[i] = manhattan_maze[x][y];
-        } else {
-            nearby_cell_val[i] = -1; // Invalid cell
-        }
+  //find the  minimum manhattan distances
+  for (int i = 0; i < 8; i++){
+    if(nearby_cell_val[i] != -1){
+      if(nearby_cell_val[i] < min){
+        min = nearby_cell_val;
+      }
     }
-    
-    int * indices = find_min_indices(nearby_cell_val, 8, &num_indices);
-    return indices;
-    //return nearby_cell_val;
+  }
+
+  //find the minimum cells
+  for (int i = 0; i < 8; i++){
+    if(nearby_cell_val[i] == min){
+      min_cells[i] = nearby_cells[i];
+    }else{
+      min_cells[i] = invalid_cell;
+    }
+  }
+  for (int i = 0; i < 8; i++){
+    manhattan_min.cells[i] = min_cells[i];
+  }
+  
+  manhattan_min.min = min;
+
+  return &manhattan_min;
 }
 
 
@@ -230,9 +231,10 @@ int* check_nearby_cells(Point cell){
 void floodfill(){
   Queue q;
   q.front = q.rear = 0;
-
   enqueue(&q , start);
-
+  int distance;
+  int walls;
+  Point min_cells;
   while(q.front != q.rear){ //checks if the queue is empty
     Point current = dequeue(&q); // Get the front cell
 
@@ -240,6 +242,64 @@ void floodfill(){
     if (current.x == goal.x && current.y == goal.y) {
       //do something to indicate that the mouse reached the goal
       return;
+    } else{
+      distance = manhattan_maze[current.x][current.y]; //gets the manhattan distance value
+      
+      //check nearby cells
+      Manhattan_min* nearby_min = check_nearby_cells(current);
+
+      //check wall scenario
+      walls = check_wall();
+      //eliminate unavailable paths
+      switch(walls){
+        case 1:
+          break;
+        case 2:
+          nearby_min->cells[4] = invalid_cell;
+        case 3:
+          nearby_min->cells[0] = invalid_cell;
+        case 4:
+          nearby_min->cells[6] = invalid_cell;
+        case 5:
+          nearby_min->cells[4] = invalid_cell;
+          nearby_min->cells[0] = invalid_cell;
+        case 6:
+          nearby_min->cells[4] = invalid_cell;
+          nearby_min->cells[5] = invalid_cell;
+          nearby_min->cells[6] = invalid_cell;
+        case 7:
+          nearby_min->cells[0] = invalid_cell;
+          nearby_min->cells[6] = invalid_cell;
+          nearby_min->cells[7] = invalid_cell;
+        case 8:
+          nearby_min->cells[0] = invalid_cell;
+          nearby_min->cells[4] = invalid_cell;
+          nearby_min->cells[5] = invalid_cell;
+          nearby_min->cells[6] = invalid_cell;
+          nearby_min->cells[7] = invalid_cell;
+      }
+
+      if(distance > nearby_min->min){
+        for(int i = 0; i < 8; i++){
+          if (nearby_min->cells[i].x != invalid_cell.x || nearby_min->cells[i].y != invalid_cell.y) {
+            enqueue(&q , nearby_min->cells[i]); //adds cell to the queue
+          }
+        }
+      }else if(distance = nearby_min->min){
+        //increment the explored cell values
+        for(int i = 0; i < 16; i++){
+          for(int j = 0; j < 16; j++){
+            if(explored[i][j] == 1){
+              manhattan_maze[i][j]++;
+            }
+          }
+          enqueue(&q , nearby_min->cells[i]); //adds cell to the queue
+        }
+
+      }
+
+      
+      
     }
   
 
@@ -249,51 +309,5 @@ void floodfill(){
 
 
 int main(){
- /* //searching algorithm
-  while(current_cell != goal){
-    int wall = check_wall();
-    
-    switch(wall){
-
-      case 1: //no walls
-        check_nearby_cells(current_cell);
-        
-        break;
-
-      case 2: //wall left
-        maze[current_cell[0]-1] [current_cell[1]] = 1; //set the left cell as a closed path
-        break;
-
-      case 3: //wall right
-        maze[current_cell[0]+1] [current_cell[1]] = 1;
-        break;
-
-      case 4: //wall front
-        maze[current_cell[0]] [current_cell[1]+1] = 1;
-        break;
-
-      case 5: //wall left and right
-        maze[current_cell[0]-1] [current_cell[1]] = 1;
-        maze[current_cell[0]+1] [current_cell[1]] = 1;
-        break;
-
-      case 6: //wall left and front
-        maze[current_cell[0]] [current_cell[1]+1] = 1;
-        maze[current_cell[0]-1] [current_cell[1]] = 1;
-        break;
-
-      case 7: //wall right and front
-        maze[current_cell[0]+1] [current_cell[1]] = 1;
-        maze[current_cell[0]] [current_cell[1]+1] = 1;
-        break;
-
-      case 8: //wall left,right and front
-        maze[current_cell[0]] [current_cell[1]+1] = 1;
-        maze[current_cell[0]-1] [current_cell[1]] = 1;
-        maze[current_cell[0]+1] [current_cell[1]] = 1;
-        break;
-
-    }
-  }*/
-
+ 
 } 
