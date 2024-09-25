@@ -108,7 +108,7 @@ int explored[16][16] = {
 
 
 //movement
-void move(Point new_cell){
+int move(Point new_cell){
   int direction;
 
   //choosing the direction
@@ -161,7 +161,7 @@ void move(Point new_cell){
       current_cell.y--;
   }
 
-
+return direction;
 }
 
 //queue
@@ -269,6 +269,7 @@ void floodfill(){
   int distance;
   int walls;
   Point min_cells;
+  int dir;
   while(q.front != q.rear){ //checks if the queue is empty
     Point current = dequeue(&q); // Get the front cell
 
@@ -333,7 +334,7 @@ void floodfill(){
     }
     //move to the next cell in queue
     Point new = dequeue(&q);
-    move(new);
+    dir = move(new);
   }
 }
 
