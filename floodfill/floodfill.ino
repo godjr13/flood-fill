@@ -108,9 +108,32 @@ int explored[16][16] = {
 
 
 //movement
-void move(int direction){
+void move(Point new_cell){
+  int direction;
+
+  //choosing the direction
+  if(new_cell.x == current_cell.x + 1 && new_cell.y == current_cell.y){
+    direction = 1;
+  }else if(new_cell.x == current_cell.x + 1 && new_cell.y == current_cell.y - 1){
+    direction = 2;
+  }else if(new_cell.x == current_cell.x && new_cell.y == current_cell.y - 1){
+    direction = 3;
+  }else if(new_cell.x == current_cell.x - 1 && new_cell.y == current_cell.y - 1){
+    direction = 4;
+  }else if(new_cell.x == current_cell.x - 1 && new_cell.y == current_cell.y){
+    direction = 5;
+  }else if(new_cell.x == current_cell.x - 1 && new_cell.y == current_cell.y + 1){
+    direction = 6;
+  }else if(new_cell.x == current_cell.x && new_cell.y == current_cell.y + 1){
+    direction = 7;
+  }else if(new_cell.x == current_cell.x + 1 && new_cell.y == current_cell.y + 1){
+    direction = 8;
+  }
+
   //marking explored cells
   explored[current_cell.x][current_cell.y] = 1;
+  
+  //move
   switch(direction){
     case 1://up 
       current_cell.y++;
@@ -309,6 +332,8 @@ void floodfill(){
       } 
     }
     //move to the next cell in queue
+    Point new = dequeue(&q);
+    move(new);
   }
 }
 
