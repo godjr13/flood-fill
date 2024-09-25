@@ -7,13 +7,14 @@
 #include <driver/gpio.h>
 #include <math.h>
 
-#define AIN1 5
-#define BIN1 19
-#define AIN2 17
-#define BIN2 18
-#define PWMA 12
-#define PWMB 13
-#define STBY 14
+// Motor control pins
+#define AIN1 5   // Motor 1 control pin
+#define BIN1 19  // Motor 2 control pin
+#define AIN2 17  // Motor 1 direction pin
+#define BIN2 18  // Motor 2 direction pin
+#define PWMA 12  // Motor 1 PWM pin
+#define PWMB 13  // Motor 2 PWM pin
+#define STBY 14  // Standby pin for both motors
 
 TaskHandle_t encoderTaskHandle = NULL; // Task handle for processing encoder counts
 TaskHandle_t MOTOR_Control_TaskHandle;
@@ -37,14 +38,11 @@ QueueHandle_t sending_ENCO2_Value;
 #define ENCODER_PIN_A2 GPIO_NUM_4   // Channel A of the second encoder
 #define ENCODER_PIN_B2 GPIO_NUM_27  // Channel B of the second encoder
 
-volatile long pulse_count1 = 0; // Pulse count for the first encoder
-volatile long pulse_count2 = 0; // Pulse count for the second encoder
+volatile long pulse_count1 = 0; //Pulse count for the first encoder
+volatile long pulse_count2 = 0; //Pulse count for the second encoder
 
 
-
-
-
-
+//PID motor control task
 void task_MOTOR_Control(void *parameter) {
     int target = 1000;
     long previousTime = 0, previousTime_1 = 0;
@@ -59,6 +57,7 @@ void task_MOTOR_Control(void *parameter) {
     float EN1 ,EN2;
 
     while (true) {
+        //Lock the encoder mutex to safely access pulse counts
         if (xSemaphoreTake(encoderMutex, portMAX_DELAY) == pdTRUE) {
             Serial.print("Encoder 1 : ");
             Serial.print(pulse_count1);
@@ -72,7 +71,7 @@ void task_MOTOR_Control(void *parameter) {
         EN1 = ENCO1;
         EN2 = ENCO2;
 
-        // Motor 1 Control
+        //Motor 1 Control
         long currentTime = micros();
         float deltaT = ((float)(currentTime - previousTime)) / 1.0e6;
         int e = abs(ENCO1 - target);
@@ -88,7 +87,7 @@ void task_MOTOR_Control(void *parameter) {
 
         u = constrain(abs(u), 0, 255);  // Ensures 'u' is within 0 to 255
 
-        // Motor 2 Control
+        //Motor 2 Control
         long currentTime_1 = micros();
         float deltaT_1 = ((float)(currentTime_1 - previousTime_1)) / 1.0e6;
         int e_1 = abs(ENCO2 - target);
@@ -103,7 +102,7 @@ void task_MOTOR_Control(void *parameter) {
 
         u_1 = constrain(abs(u_1), 0, 255);  // Ensures 'u_1' is within 0 to 255
 
-        // Send values to the queue with checks
+        //Send values to the queue with checks
         if (xQueueSend(sending_u_Value, &u, pdMS_TO_TICKS(10)) != pdPASS) {
             Serial.println("Failed to send u to queue.");
         }
@@ -124,6 +123,7 @@ void task_MOTOR_Control(void *parameter) {
     }
 }
 
+//Motor 1 control task that receives encoder and control signal from the queue
 void MOTOR1Task(void *pvParameters) {
     float U_1;
     float ENCO1;
@@ -149,6 +149,7 @@ void MOTOR1Task(void *pvParameters) {
     }
 }
 
+//Motor 2 control task
 void MOTOR2Task(void *pvParameters) {
     float U_2;
     float ENCO2;
