@@ -1,16 +1,27 @@
+#include <Arduino.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include <esp_system.h>
 
-//sensors
-#define tof
-#define ir_left
-#define ir_right
-#define ir_left45
-#define ir_right45
+// Task handlers/////////////////////////////////////////////////////////
+TaskHandle_t task1HandleLEFTsHARRPIR;
+TaskHandle_t task2HandleRIGHTsHARRPIR;
+TaskHandle_t task3HandleMainSHARRP_IR;
+TaskHandle_t taskHandleReciveData;
+
+
+// Queue handler/////////////////////////////////////////////////////////
+QueueHandle_t sending_IR1_Value;
+QueueHandle_t sending_IR2_Value;
+QueueHandle_t sending_MAIN_IR_Value;
+
+
+
 
 #define Q_size (16*16)
 #define INT_MAX 2147483647
 
-//distance set points
-int tof_sp, irleft_sp, irright_sp, irr45_sp, irl45_sp;
 
 //Point struct definition 
 typedef struct{
