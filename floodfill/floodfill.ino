@@ -193,20 +193,6 @@ Point dequeue(Queue *q) {
 }
 
 //other functions
-int check_wall(){
-  
-  /* wall senarios : 
-    Scenario 1: no walls
-    Scenario 2: wall left
-    Scenario 3: wall right
-    Scenario 4: wall front
-    Scenario 5: wall left and right
-    Scenario 6: wall left and front
-    Scenario 7: wall right and front
-    Scenario 8: wall left,right and front */
-  int wall_val;
-  return wall_val;
-}
 
 Manhattan_min* check_nearby_cells(Point cell){
   int min = 16;
@@ -284,7 +270,7 @@ void floodfill(){
       Manhattan_min* nearby_min = check_nearby_cells(current);
 
       //check wall scenario
-      walls = check_wall();
+      ////////walls /////////////////////////////////////////////////////////////;
       //eliminate unavailable paths
       switch(walls){
         case 1:
