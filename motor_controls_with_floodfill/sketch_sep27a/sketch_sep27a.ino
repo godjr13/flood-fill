@@ -52,7 +52,7 @@ QueueHandle_t sending_target_left_wheel;
 QueueHandle_t sending_target_right_wheel;
 
 //foolfill Queue handler/////////////////////////////////////////////////////////
-QueueHandle_t sending_deraction;
+QueueHandle_t sending_direction;
 
 // Encoder pins and counts /////////////////////////////////////////////////
 #define ESP_INTR_FLAG_DEFAULT 0
@@ -161,7 +161,24 @@ Manhattan_min* check_nearby_cells(Point cell);
 // Move function
 int move(Point new_cell) {
   int direction;
-  // Choosing the direction logic
+  //choosing the direction
+  if(new_cell.x == current_cell.x + 1 && new_cell.y == current_cell.y){
+    direction = 1;
+  }else if(new_cell.x == current_cell.x + 1 && new_cell.y == current_cell.y - 1){
+    direction = 2;
+  }else if(new_cell.x == current_cell.x && new_cell.y == current_cell.y - 1){
+    direction = 3;
+  }else if(new_cell.x == current_cell.x - 1 && new_cell.y == current_cell.y - 1){
+    direction = 4;
+  }else if(new_cell.x == current_cell.x - 1 && new_cell.y == current_cell.y){
+    direction = 5;
+  }else if(new_cell.x == current_cell.x - 1 && new_cell.y == current_cell.y + 1){
+    direction = 6;
+  }else if(new_cell.x == current_cell.x && new_cell.y == current_cell.y + 1){
+    direction = 7;
+  }else if(new_cell.x == current_cell.x + 1 && new_cell.y == current_cell.y + 1){
+    direction = 8;
+  }
   // ... [Direction logic unchanged]
   return direction;
 }
@@ -366,7 +383,7 @@ void task_ReciveData(void *parameter) {
 }
 
 void task_MOTOR_Control(void *parameter) {
-    int target_left_wheel = 0 , target_right_wheel = 0 , wall_num = 0;
+    int target_left_wheel = 0 , target_right_wheel = 0 , wall_num = 0 , dir;
     long previousTime = 0, previousTime_1 = 0;
     float ePrevious = 0, ePrevious_1 = 0;
     float eIntegral = 0, eIntegral_1 = 0;
@@ -391,9 +408,10 @@ void task_MOTOR_Control(void *parameter) {
 
         EN1 = ENCO1;
         EN2 = ENCO2;
-        xQueueReceive(sending_wall_num, &wall_num, portMAX_DELAY);
+        
+        xQueueReceive(sending_direction, &dir, portMAX_DELAY);
 
-        switch (wall_num) {
+        switch (dir) {
             case 1:
                 target_left_wheel = ENCO1 + counts_per_cell;
                 target_right_wheel = ENCO2 + counts_per_cell;
@@ -539,7 +557,7 @@ void FloodFillTask(void *pvParameters) {
 
     distance = manhattan_maze[current.x][current.y];
     Manhattan_min* nearby_min = check_nearby_cells(current);
-     xQueueReceive(sending_wall_num, &walls, portMAX_DELAY);
+    xQueueReceive(sending_wall_num, &walls, portMAX_DELAY);
 
     switch(walls){
         case 1:
@@ -586,7 +604,7 @@ void FloodFillTask(void *pvParameters) {
 
     Point new_cell = dequeue(&q);
     dir = move(new_cell);
-    xQueueSend(sending_deraction, &dir, pdMS_TO_TICKS(10));
+    xQueueSend(sending_direction, &dir, pdMS_TO_TICKS(10));
   }
 }
 
@@ -662,7 +680,7 @@ void setup() {
   encoderMutex = xSemaphoreCreateMutex();
 
  //floodfill queue and task
-  sending_deraction = xQueueCreate(1, sizeof(float));
+  sending_direction = xQueueCreate(1, sizeof(float));
   xTaskCreate(FloodFillTask, "TheFloodFillTask", 10000, NULL, 2, NULL);
 
   xTaskCreate(task_MOTOR_Control, "Task_MOTOR_Control", 7000, NULL, 0, &MOTOR_Control_TaskHandle);
