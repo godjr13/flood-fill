@@ -46,6 +46,9 @@ QueueHandle_t sending_wall_num;
 //motor target Queue handler/////////////////////////////////////////////////////////
 QueueHandle_t sending_target_left_wheel;
 QueueHandle_t sending_target_right_wheel;
+//wallClose queue
+QueueHandle_t boolQueue1;
+QueueHandle_t boolQueue2;
 
 // Encoder pins and counts /////////////////////////////////////////////////
 #define ESP_INTR_FLAG_DEFAULT 0
@@ -106,9 +109,10 @@ void task3_MAIN_Sharp_IR(void *parameter) {
 void task_ReciveData(void *parameter) {
   while (true) {
     float IR_1 , IR_2 , IR_MAIN;
-    int wall_num;
+    int wall_num , wall_distance_1 = 15 ,wall_distance_2 = 10;
 
     bool forward_ok = false , left_ok = false , right_ok = false;
+    bool  left_close = false , right_close = false;
 
      xQueueReceive(sending_IR1_Value, &IR_1, portMAX_DELAY);
      xQueueReceive(sending_IR2_Value, &IR_2, portMAX_DELAY);
@@ -122,7 +126,7 @@ void task_ReciveData(void *parameter) {
      Serial.print("\t"); 
 
 
-      if(IR_1<10){
+      if(IR_1<wall_distance_1){
         left_ok = false;
         //Serial.print("Left wall detected");
         }
@@ -131,7 +135,7 @@ void task_ReciveData(void *parameter) {
         //Serial.print("NO Left wall detected");
         }
        // Serial.print("\t"); 
-      if(IR_2<10){
+      if(IR_2<wall_distance_1){
         right_ok = false;
         //Serial.print("Right wall detected");
         }
@@ -140,7 +144,7 @@ void task_ReciveData(void *parameter) {
         //Serial.print("NO Right wall detected");
         }
         //Serial.print("\t"); 
-      if(IR_MAIN<10){
+      if(IR_MAIN<wall_distance_1){
         forward_ok = false;
         //Serial.print("Front wall detected");
         }
@@ -149,43 +153,174 @@ void task_ReciveData(void *parameter) {
         //Serial.print("NO Front wall detected");
         }
 
+        
+
       Serial.print("\t"); 
 
       if(forward_ok == true && left_ok == true && right_ok == true){
         Serial.println("go forward");
         wall_num = 1;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == true && left_ok == true && right_ok == false){
         Serial.println("go forward or left");
         wall_num = 3;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == true && left_ok == false && right_ok == true){
         Serial.println("go forward or right");
         wall_num = 2;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == true && left_ok == false && right_ok == false){
         Serial.println("go forward only");
         wall_num = 5;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == false && left_ok == true && right_ok == true){
         Serial.println("go left or right");
         wall_num = 4;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == false && left_ok == true && right_ok == false){
         Serial.println("go left");
         wall_num = 7;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == false && left_ok == false && right_ok == true){
         Serial.println("go right");
         wall_num = 6;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
       if(forward_ok == false && left_ok == false && right_ok == false){
         Serial.println("go back");
         wall_num = 8;
+        if(IR_1<wall_distance_2){
+        left_close = false;
+        //Serial.print("Left wall detected");
+        }
+      else{
+        left_close = true;
+        //Serial.print("NO Left wall detected");
+        }
+        if(IR_2<wall_distance_2){
+        right_close = false;
+        //Serial.print("Right wall detected");
+        }
+      else{
+        right_close = true;
+        //Serial.print("NO Right wall detected");
+        }
       }
 
       xQueueSend(sending_wall_num, &wall_num, portMAX_DELAY);  
-
+      xQueueSend(boolQueue1, &left_close, portMAX_DELAY);
+      xQueueSend(boolQueue2, &right_close, portMAX_DELAY);
 
      vTaskDelay(pdMS_TO_TICKS(10));
 
@@ -197,7 +332,7 @@ void task_ReciveData(void *parameter) {
 }
 
 void task_MOTOR_Control(void *parameter) {
-    int target_left_wheel = 0 , target_right_wheel = 0 , wall_num = 0;
+    int target_left_wheel = 0 , target_right_wheel = 0 , wall_num = 0 , pwm_wall_close = 100;
     long previousTime = 0, previousTime_1 = 0;
     float ePrevious = 0, ePrevious_1 = 0;
     float eIntegral = 0, eIntegral_1 = 0;
@@ -206,7 +341,7 @@ void task_MOTOR_Control(void *parameter) {
     float kd = 0.00005;
     float ki = 0.0000000;
     volatile long ENCO1, ENCO2 ,counts_per_cell = 465 , counts_per_90_turn = 200 , counts_per_180_turn = 400;
-
+    bool  left_close = false , right_close = false;
     float EN1 ,EN2;
 
     while (true) {
@@ -223,27 +358,82 @@ void task_MOTOR_Control(void *parameter) {
         EN1 = ENCO1;
         EN2 = ENCO2;
         xQueueReceive(sending_wall_num, &wall_num, portMAX_DELAY);
+        xQueueReceive(boolQueue1, &left_close, portMAX_DELAY);
+        xQueueReceive(boolQueue2, &right_close, portMAX_DELAY);
 
         switch (wall_num) {
             case 1:
+              if(left_close == false && right_close == false){
                 target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == false && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell ;
+                target_right_wheel = ENCO2 + counts_per_cell - pwm_wall_close; }
+
+                if(left_close == true && right_close == false){
+                target_left_wheel = ENCO1 + counts_per_cell - pwm_wall_close;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == true && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
                 break;
             case 2:
+                if(left_close == false && right_close == false){
                 target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == false && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell - pwm_wall_close ; }
+
+                if(left_close == true && right_close == false){
+                target_left_wheel = ENCO1 + counts_per_cell- pwm_wall_close;
+                target_right_wheel = ENCO2 + counts_per_cell ; }
+
+                if(left_close == true && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+                
                 break;
             case 3:
+                if(left_close == false && right_close == false){
                 target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == false && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell ;
+                target_right_wheel = ENCO2 + counts_per_cell - pwm_wall_close ; }
+
+                if(left_close == true && right_close == false){
+                target_left_wheel = ENCO1 + counts_per_cell - pwm_wall_close ;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == true && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
                 break;
             case 4:
                 target_left_wheel = ENCO1 - counts_per_90_turn;
                 target_right_wheel = ENCO2 + counts_per_90_turn;
                 break;
             case 5:
+                if(left_close == false && right_close == false){
                 target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == false && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell - pwm_wall_close ; }
+
+                if(left_close == true && right_close == false){
+                target_left_wheel = ENCO1 + counts_per_cell  - pwm_wall_close ;
+                target_right_wheel = ENCO2 + counts_per_cell; }
+
+                if(left_close == true && right_close == true){
+                target_left_wheel = ENCO1 + counts_per_cell;
+                target_right_wheel = ENCO2 + counts_per_cell; }
                 break;
             case 6:
                 target_left_wheel = ENCO1 + counts_per_90_turn;
@@ -419,6 +609,8 @@ void setup() {
   sending_target_left_wheel = xQueueCreate(1, sizeof(int));
   sending_target_right_wheel = xQueueCreate(1, sizeof(int));
 
+  boolQueue1 = xQueueCreate(10, sizeof(bool));
+  boolQueue2 = xQueueCreate(10, sizeof(bool));
   
   // Create mutex for encoder counts
   encoderMutex = xSemaphoreCreateMutex();
