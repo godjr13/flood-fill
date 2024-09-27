@@ -53,6 +53,9 @@ QueueHandle_t sending_target_right_wheel;
 
 //foolfill Queue handler/////////////////////////////////////////////////////////
 QueueHandle_t sending_deraction;
+//wallClose queue
+QueueHandle_t IR_PID_Queue1;
+QueueHandle_t IR_PID_Queue2;
 
 // Encoder pins and counts /////////////////////////////////////////////////
 #define ESP_INTR_FLAG_DEFAULT 0
@@ -274,10 +277,21 @@ void task3_MAIN_Sharp_IR(void *parameter) {
 
 void task_ReciveData(void *parameter) {
   while (true) {
+
+    int  target_left_IR = 5 , target_right_IR = 5;
+    long previousTime2 = 0, previousTime3 = 0;
+    float ePrevious2 = 0, ePrevious3 = 0;
+    float eIntegral2 = 0, eIntegral3 = 0;
+    float u2, u3;
+    float kp = 42.5;
+    float kd = 0.0005;
+    float ki = 0.0000000;
+
     float IR_1 , IR_2 , IR_MAIN;
-    int wall_num;
+    int wall_num , wall_distance_1 = 10;
 
     bool forward_ok = false , left_ok = false , right_ok = false;
+    
 
      xQueueReceive(sending_IR1_Value, &IR_1, portMAX_DELAY);
      xQueueReceive(sending_IR2_Value, &IR_2, portMAX_DELAY);
@@ -291,7 +305,39 @@ void task_ReciveData(void *parameter) {
      Serial.print("\t"); 
 
 
-      if(IR_1<10){
+            // Motor 1 Control
+        long currentTime2 = micros();
+        float deltaT2 = ((float)(currentTime2 - previousTime2)) / 1.0e6;
+        int e2 = IR_1 - target_left_IR;
+        float eDerivative2 = (e2 - ePrevious2) / deltaT2;
+        eIntegral2 += e2 * deltaT2;
+        u2 = (kp * e2) + (kd * eDerivative2) + (ki * eIntegral2);
+        previousTime2 = currentTime2;
+        ePrevious2 = e2;
+
+          //Serial.print("\t"); 
+          //Serial.print(u2);
+    
+
+        u2 = constrain(abs(u2), 0, 200);  // Ensures 'u' is within 0 to 55 left
+
+        // Motor 2 Control
+        long currentTime3 = micros();
+        float deltaT3 = ((float)(currentTime3 - previousTime3)) / 1.0e6;
+        int e3 = IR_2 - target_right_IR;
+        float eDerivative3 = (e3 - ePrevious3) / deltaT3;
+        eIntegral3 += e3 * deltaT3;
+        u3 = (kp * e3) + (kd * eDerivative3) + (ki * eIntegral3);
+        previousTime3 = currentTime3;
+        ePrevious3 = e3;
+
+        //Serial.print("\t"); 
+        //Serial.print(u_1);
+
+        u3 = constrain(abs(u3), 0, 200);  // Ensures 'u_1' is within 0 to 55 right
+
+
+      if(IR_1<wall_distance_1){
         left_ok = false;
         //Serial.print("Left wall detected");
         }
@@ -300,7 +346,7 @@ void task_ReciveData(void *parameter) {
         //Serial.print("NO Left wall detected");
         }
        // Serial.print("\t"); 
-      if(IR_2<10){
+      if(IR_2<wall_distance_1){
         right_ok = false;
         //Serial.print("Right wall detected");
         }
@@ -309,7 +355,7 @@ void task_ReciveData(void *parameter) {
         //Serial.print("NO Right wall detected");
         }
         //Serial.print("\t"); 
-      if(IR_MAIN<10){
+      if(IR_MAIN<wall_distance_1){
         forward_ok = false;
         //Serial.print("Front wall detected");
         }
@@ -318,43 +364,54 @@ void task_ReciveData(void *parameter) {
         //Serial.print("NO Front wall detected");
         }
 
+        
+
       Serial.print("\t"); 
 
       if(forward_ok == true && left_ok == true && right_ok == true){
         Serial.println("go forward");
         wall_num = 1;
+        
       }
       if(forward_ok == true && left_ok == true && right_ok == false){
         Serial.println("go forward or left");
         wall_num = 3;
+        
       }
       if(forward_ok == true && left_ok == false && right_ok == true){
         Serial.println("go forward or right");
         wall_num = 2;
+        
       }
       if(forward_ok == true && left_ok == false && right_ok == false){
         Serial.println("go forward only");
         wall_num = 5;
+        
       }
       if(forward_ok == false && left_ok == true && right_ok == true){
         Serial.println("go left or right");
         wall_num = 4;
+        
       }
       if(forward_ok == false && left_ok == true && right_ok == false){
         Serial.println("go left");
         wall_num = 7;
+        
       }
       if(forward_ok == false && left_ok == false && right_ok == true){
         Serial.println("go right");
         wall_num = 6;
+        
       }
       if(forward_ok == false && left_ok == false && right_ok == false){
         Serial.println("go back");
         wall_num = 8;
+       
       }
 
       xQueueSend(sending_wall_num, &wall_num, portMAX_DELAY);  
-
+      xQueueSend(IR_PID_Queue1, &u2, portMAX_DELAY);
+      xQueueSend(IR_PID_Queue2, &u3, portMAX_DELAY);
 
      vTaskDelay(pdMS_TO_TICKS(10));
 
@@ -366,7 +423,7 @@ void task_ReciveData(void *parameter) {
 }
 
 void task_MOTOR_Control(void *parameter) {
-    int target_left_wheel = 0 , target_right_wheel = 0 , wall_num = 0;
+    int target_left_wheel = 0 , target_right_wheel = 0 , wall_num = 0 ;
     long previousTime = 0, previousTime_1 = 0;
     float ePrevious = 0, ePrevious_1 = 0;
     float eIntegral = 0, eIntegral_1 = 0;
@@ -374,8 +431,8 @@ void task_MOTOR_Control(void *parameter) {
     float kp = 0.325;
     float kd = 0.00005;
     float ki = 0.0000000;
-    volatile long ENCO1, ENCO2 ,counts_per_cell = 465 , counts_per_90_turn = 200 , counts_per_180_turn = 400;
-
+    volatile long ENCO1, ENCO2 ,counts_per_cell = 465 , counts_per_90_turn = 220 , counts_per_180_turn = 440;
+    float  u2  , u3 ;
     float EN1 ,EN2;
 
     while (true) {
@@ -392,27 +449,35 @@ void task_MOTOR_Control(void *parameter) {
         EN1 = ENCO1;
         EN2 = ENCO2;
         xQueueReceive(sending_wall_num, &wall_num, portMAX_DELAY);
+        xQueueReceive(IR_PID_Queue1, &u2, portMAX_DELAY);//left IR PID
+        xQueueReceive(IR_PID_Queue2, &u3, portMAX_DELAY);//right ir PID
 
         switch (wall_num) {
             case 1:
-                target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+              
+                target_left_wheel = ENCO1 + counts_per_cell - u3;
+                target_right_wheel = ENCO2 + counts_per_cell - u2; 
+
+
                 break;
             case 2:
-                target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_left_wheel = ENCO1 + counts_per_cell - u3;
+                target_right_wheel = ENCO2 + counts_per_cell - u2; 
+
                 break;
             case 3:
-                target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_left_wheel = ENCO1 + counts_per_cell - u3;
+                target_right_wheel = ENCO2 + counts_per_cell - u2; 
+
                 break;
             case 4:
-                target_left_wheel = ENCO1 - counts_per_90_turn;
-                target_right_wheel = ENCO2 + counts_per_90_turn;
+                target_left_wheel = ENCO1 + counts_per_90_turn;
+                target_right_wheel = ENCO2 - counts_per_90_turn;
                 break;
             case 5:
-                target_left_wheel = ENCO1 + counts_per_cell;
-                target_right_wheel = ENCO2 + counts_per_cell;
+                target_left_wheel = ENCO1 + counts_per_cell - u3;
+                target_right_wheel = ENCO2 + counts_per_cell - u2; 
+
                 break;
             case 6:
                 target_left_wheel = ENCO1 + counts_per_90_turn;
@@ -520,6 +585,7 @@ void MOTOR1Task(void *pvParameters) {
             //else{                     Motor2_brake(); }   
     }
 }
+
 
 // flood fill task function
 void FloodFillTask(void *pvParameters) {
@@ -656,6 +722,10 @@ void setup() {
 
   sending_target_left_wheel = xQueueCreate(1, sizeof(int));
   sending_target_right_wheel = xQueueCreate(1, sizeof(int));
+
+  IR_PID_Queue1 = xQueueCreate(1, sizeof(float));
+  IR_PID_Queue2 = xQueueCreate(1, sizeof(float));
+  
 
   
   // Create mutex for encoder counts
