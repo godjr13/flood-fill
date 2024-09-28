@@ -88,8 +88,8 @@ typedef struct{
 
 // Maze info
 Point current_cell = {0, 16};
-Point start = {0, 16};
-Point goal = {8, 8};
+Point start = {4, 12};
+Point goal = {8, 9};
 Point invalid_cell = {-1,-1};
 
 // Maze matrix
@@ -556,6 +556,12 @@ void FloodFillTask(void *pvParameters) {
     }
 
     distance = manhattan_maze[current.x][current.y];
+    
+    //debugging
+    Serial.print("Manhattan distance: ");
+    Serial.print("/t");
+    Serial.println(distance);
+
     Manhattan_min* nearby_min = check_nearby_cells(current);
     xQueueReceive(sending_wall_num, &walls, portMAX_DELAY);
 
@@ -602,6 +608,12 @@ void FloodFillTask(void *pvParameters) {
       }
     }
 
+    //debugging
+    Serial.print("Manhattan distance: ");
+    Serial.print("/t");
+    Serial.println(distance);
+
+    
     Point new_cell = dequeue(&q);
     dir = move(new_cell);
     xQueueSend(sending_direction, &dir, pdMS_TO_TICKS(10));
